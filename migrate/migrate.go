@@ -12,14 +12,7 @@ import (
 )
 
 func Migrate() {
-	database := os.Getenv("BLUEPRINT_DB_DATABASE")
-	password := os.Getenv("BLUEPRINT_DB_PASSWORD")
-	username := os.Getenv("BLUEPRINT_DB_USERNAME")
-	port := os.Getenv("BLUEPRINT_DB_PORT")
-	host := os.Getenv("BLUEPRINT_DB_HOST")
-	schema := os.Getenv("BLUEPRINT_DB_SCHEMA")
-
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable search_path=%s", host, username, password, database, port, schema)
+	dsn := os.Getenv("DIRECT_URL")
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
