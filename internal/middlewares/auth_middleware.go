@@ -35,7 +35,7 @@ func requireAuth(c *gin.Context) {
 		return
 	}
 
-	if member.Role != models.RoleAdmin && member.Role != models.RoleDeveloper {
+	if member.Role != models.RoleAdmin && member.Role != models.RoleMember {
 		c.AbortWithStatus(http.StatusForbidden)
 		return
 	}
@@ -50,3 +50,23 @@ func RequireAuth(gormDB *gorm.DB) gin.HandlerFunc {
 	db = gormDB
 	return requireAuth
 }
+
+func requireAdmin(c *gin.Context) {
+	member, exists := c.Get("member")
+	if !exists {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	if member.(models.Member).Role != models.RoleAdmin {
+		c.AbortWithStatus(http.StatusForbidden)
+		return
+	}
+
+	c.Next()
+}
+
+func RequireAdmin(gormDB *gorm.DB) gin.HandlerFunc {
+	db = gormDB
+	return requireAdmin
+}
+
