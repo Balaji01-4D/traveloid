@@ -4,6 +4,7 @@ type Place struct {
 	ID        int64   `gorm:"primaryKey;autoIncrement" json:"id"`
 	Name      string  `gorm:"type:varchar(100);not null" json:"name"`
 	ImageLink string  `gorm:"type:varchar(255)" json:"image_link"`
+	Capacity  int64   `gorm:"not null;default:0" json:"capacity"`
 	Latitude  float64 `gorm:"type:decimal(10,8);not null" json:"latitude"`
 	Longitude float64 `gorm:"type:decimal(11,8);not null" json:"longitude"`
 
