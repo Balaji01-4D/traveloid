@@ -2,14 +2,17 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"go-auth-template/internal/logger"
+	"log/slog"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"go-auth-template/internal/server"
+
+	"github.com/gin-gonic/gin"
 )
 
 func gracefulShutdown(apiServer *http.Server, done chan bool) {
@@ -20,7 +23,7 @@ func gracefulShutdown(apiServer *http.Server, done chan bool) {
 	// Listen for the interrupt signal.
 	<-ctx.Done()
 
-	log.Println("shutting down gracefully, press Ctrl+C again to force")
+	slog.Info("shutting down gracefully, press Ctrl+C again to force")
 	stop() // Allow Ctrl+C to force shutdown
 
 	// The context is used to inform the server it has 5 seconds to finish
@@ -28,16 +31,21 @@ func gracefulShutdown(apiServer *http.Server, done chan bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := apiServer.Shutdown(ctx); err != nil {
-		log.Printf("Server forced to shutdown with error: %v", err)
+		slog.Error("server forced to shutdown", "error", err)
 	}
 
-	log.Println("Server exiting")
+	slog.Info("server exiting")
 
 	// Notify the main goroutine that the shutdown is complete
 	done <- true
 }
 
 func main() {
+	slog.SetDefault(logger.New().With("component", "api"))
+
+	if os.Getenv("GIN_MODE") == "" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
 	server := server.NewServer()
 
@@ -49,10 +57,11 @@ func main() {
 
 	err := server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
-		panic(fmt.Sprintf("http server error: %s", err))
+		slog.Error("http server failed", "error", err)
+		panic(err)
 	}
 
 	// Wait for the graceful shutdown to complete
 	<-done
-	log.Println("Graceful shutdown complete.")
+	slog.Info("graceful shutdown complete")
 }

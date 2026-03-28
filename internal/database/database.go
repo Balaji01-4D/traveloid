@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"strconv"
 	"time"
@@ -11,6 +11,7 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 // Service represents a service that interacts with a database.
@@ -36,15 +37,20 @@ var (
 )
 
 func New() Service {
+	log := slog.Default().With("component", "database")
+
 	// Reuse Connection
 	if dbInstance != nil {
 		return dbInstance
 	}
 	dsn := os.Getenv("DATABASE_URL")
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.New(postgres.Config{DSN: dsn, PreferSimpleProtocol: true}), &gorm.Config{
+		Logger: gormlogger.Default.LogMode(gormlogger.Error),
+	})
 	if err != nil {
-		log.Fatal(err)
+		log.Error("failed to connect database", "error", err)
+		panic(err)
 	}
 
 	dbInstance = &service{db: db}
@@ -54,6 +60,8 @@ func New() Service {
 // Health checks the health of the database connection by pinging the database.
 // It returns a map with keys indicating various health statistics.
 func (s *service) Health() map[string]string {
+	log := slog.Default().With("component", "database")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
@@ -64,7 +72,7 @@ func (s *service) Health() map[string]string {
 	if err != nil {
 		stats["status"] = "down"
 		stats["error"] = fmt.Sprintf("failed to get underlying sql DB: %v", err)
-		log.Fatalf("failed to get underlying sql DB: %v", err)
+		log.Error("failed to get underlying sql db", "error", err)
 		return stats
 	}
 
@@ -72,7 +80,7 @@ func (s *service) Health() map[string]string {
 	if err != nil {
 		stats["status"] = "down"
 		stats["error"] = fmt.Sprintf("db down: %v", err)
-		log.Fatalf("db down: %v", err) // Log the error and terminate the program
+		log.Error("database ping failed", "error", err)
 		return stats
 	}
 
@@ -115,7 +123,7 @@ func (s *service) Health() map[string]string {
 // If the connection is successfully closed, it returns nil.
 // If an error occurs while closing the connection, it returns the error.
 func (s *service) Close() error {
-	log.Printf("Disconnected from database: %s", os.Getenv("DATABASE_URL"))
+	slog.Default().With("component", "database").Info("disconnected from database")
 	sqlDB, err := s.db.DB()
 	if err != nil {
 		return err

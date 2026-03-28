@@ -4,6 +4,7 @@ import (
 	"go-auth-template/internal/member"
 	"go-auth-template/internal/organisation"
 	"go-auth-template/internal/place"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-contrib/cors"
@@ -11,7 +12,10 @@ import (
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
-	r := gin.Default()
+	log := slog.Default().With("component", "http")
+
+	r := gin.New()
+	r.Use(recoveryWithSlog(log), requestLogger(log))
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173"}, // Add your frontend URL
@@ -27,6 +31,8 @@ func (s *Server) RegisterRoutes() http.Handler {
 	organisation.RegisterRoutes(r, s.db.GetDB())
 	place.RegisterRoutes(r, s.db.GetDB())
 	member.RegisterRoutes(r, s.db.GetDB())
+
+	log.Info("routes registered")
 
 	return r
 }
