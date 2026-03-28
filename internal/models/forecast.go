@@ -8,8 +8,8 @@ type Forecast struct {
 	Timestamp time.Time `gorm:"not null;index" json:"timestamp"`
 	Count     int       `gorm:"not null" json:"count"`
 
-	UpperBound int       `gorm:"not null" json:"upper_bound"`
-	LowerBound int       `gorm:"not null" json:"lower_bound"`
+	UpperBound int `gorm:"not null" json:"upper_bound"`
+	LowerBound int `gorm:"not null" json:"lower_bound"`
 
 	Place Place `gorm:"foreignKey:PlaceID;references:ID;constraint:OnDelete:CASCADE" json:"-"`
 }
