@@ -39,14 +39,15 @@ func TestRepository_CreatePlace(t *testing.T) {
 	p := &models.Place{
 		Name:           "Eiffel Tower",
 		ImageLink:      "http://example.com/eiffel.jpg",
+		Capacity:       500,
 		Latitude:       48.8584,
 		Longitude:      2.2945,
 		OrganisationID: 1,
 	}
 
 	mock.ExpectBegin()
-	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "places" ("name","image_link","latitude","longitude","organisation_id") VALUES ($1,$2,$3,$4,$5) RETURNING "id"`)).
-		WithArgs(p.Name, p.ImageLink, p.Latitude, p.Longitude, p.OrganisationID).
+	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "places" ("name","image_link","capacity","latitude","longitude","organisation_id") VALUES ($1,$2,$3,$4,$5,$6) RETURNING "id"`)).
+		WithArgs(p.Name, p.ImageLink, p.Capacity, p.Latitude, p.Longitude, p.OrganisationID).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	mock.ExpectCommit()
 
@@ -107,14 +108,15 @@ func TestRepository_UpdatePlace(t *testing.T) {
 	p := &models.Place{
 		ID:             1,
 		Name:           "Eiffel Tower Updated",
+		Capacity:       600,
 		Latitude:       48.8584,
 		Longitude:      2.2945,
 		OrganisationID: 1,
 	}
 
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(`UPDATE "places" SET "name"=$1,"image_link"=$2,"latitude"=$3,"longitude"=$4,"organisation_id"=$5 WHERE "id" = $6`)).
-		WithArgs(p.Name, p.ImageLink, p.Latitude, p.Longitude, p.OrganisationID, p.ID).
+	mock.ExpectExec(regexp.QuoteMeta(`UPDATE "places" SET "name"=$1,"image_link"=$2,"capacity"=$3,"latitude"=$4,"longitude"=$5,"organisation_id"=$6 WHERE "id" = $7`)).
+		WithArgs(p.Name, p.ImageLink, p.Capacity, p.Latitude, p.Longitude, p.OrganisationID, p.ID).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 

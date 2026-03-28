@@ -1,8 +1,15 @@
 package member
 
 import (
+	"errors"
 	"go-auth-template/internal/models"
 	"go-auth-template/internal/utils"
+)
+
+var (
+	ErrForbiddenDeleteAction            = errors.New("forbidden delete action")
+	ErrAdminDeleteRequiresConfirmation  = errors.New("admin delete requires confirmation")
+	ErrAdminDeleteOrganisationNameCheck = errors.New("organisation name confirmation failed")
 )
 
 type Service struct {
@@ -46,6 +53,45 @@ func (s *Service) ChangePassword(UserID int64, oldPassword string, NewPassword s
 
 func (s *Service) DeleteUser(id int64) error {
 	return s.repository.DeleteUser(id)
+}
+
+func (s *Service) DeleteMemberByAdmin(adminOrgID int64, targetID int64) error {
+	target, err := s.repository.GetUserByID(targetID)
+	if err != nil {
+		return err
+	}
+
+	if target.OrganisationID != adminOrgID {
+		return ErrForbiddenDeleteAction
+	}
+
+	if target.Role != models.RoleMember {
+		return ErrForbiddenDeleteAction
+	}
+
+	return s.repository.DeleteUser(target.ID)
+}
+
+func (s *Service) DeleteAccount(currentMember models.Member, dto *DeleteAccountDTO) error {
+	if currentMember.Role != models.RoleAdmin {
+		return s.repository.DeleteUser(currentMember.ID)
+	}
+
+	if !dto.ConfirmDeleteOrganisation || dto.ConfirmText != "DELETE" {
+		return ErrAdminDeleteRequiresConfirmation
+	}
+
+	org, err := s.repository.GetOrganisationByID(currentMember.OrganisationID)
+	if err != nil {
+		return err
+	}
+
+	if dto.ConfirmOrganisationName != org.Name {
+		return ErrAdminDeleteOrganisationNameCheck
+	}
+
+	// Deleting organisation cascades to members and places via FK constraints.
+	return s.repository.DeleteOrganisation(currentMember.OrganisationID)
 }
 
 func (s *Service) AuthenticateUser(email, password string) (*models.Member, error) {

@@ -41,3 +41,15 @@ func (r *Repository) UpdateUser(user *models.Member) error {
 func (r *Repository) DeleteUser(id int64) error {
 	return r.DB.Delete(&models.Member{}, id).Error
 }
+
+func (r *Repository) GetOrganisationByID(id int64) (*models.Organisation, error) {
+	var org models.Organisation
+	if err := r.DB.First(&org, id).Error; err != nil {
+		return nil, err
+	}
+	return &org, nil
+}
+
+func (r *Repository) DeleteOrganisation(id int64) error {
+	return r.DB.Delete(&models.Organisation{}, id).Error
+}

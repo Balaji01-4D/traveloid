@@ -38,7 +38,8 @@ func setupTestRouterAndController(t *testing.T) (*gin.Engine, *place.Controller,
 
 func mockUserMiddleware(userId int64) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Set("user", models.Member{ID: userId, Name: "TestUser"})
+		c.Set("member", models.Member{ID: userId, Name: "TestUser", OrganisationID: 1})
+		c.Set("organisation_id", int64(1))
 		c.Next()
 	}
 }
@@ -51,6 +52,7 @@ func TestController_Register(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		reqBody := place.PlaceRegisterDTO{
 			Name:      "New Place",
+			Capacity:  120,
 			Latitude:  12.34,
 			Longitude: 56.78,
 		}
@@ -61,8 +63,8 @@ func TestController_Register(t *testing.T) {
 		w := httptest.NewRecorder()
 
 		mock.ExpectBegin()
-		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "places" ("name","image_link","latitude","longitude","organisation_id") VALUES ($1,$2,$3,$4,$5) RETURNING "id"`)).
-			WithArgs(reqBody.Name, "", reqBody.Latitude, reqBody.Longitude, int64(1)).
+		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "places" ("name","image_link","capacity","latitude","longitude","organisation_id") VALUES ($1,$2,$3,$4,$5,$6) RETURNING "id"`)).
+			WithArgs(reqBody.Name, "", reqBody.Capacity, reqBody.Latitude, reqBody.Longitude, int64(1)).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 		mock.ExpectCommit()
 
@@ -87,6 +89,7 @@ func TestController_Register(t *testing.T) {
 	t.Run("Unauthorized Error", func(t *testing.T) {
 		reqBody := place.PlaceRegisterDTO{
 			Name:      "New Place",
+			Capacity:  120,
 			Latitude:  12.34,
 			Longitude: 56.78,
 		}
@@ -103,6 +106,7 @@ func TestController_Register(t *testing.T) {
 	t.Run("DB Failure", func(t *testing.T) {
 		reqBody := place.PlaceRegisterDTO{
 			Name:      "Bad Place",
+			Capacity:  80,
 			Latitude:  12.34,
 			Longitude: 56.78,
 		}
@@ -131,6 +135,7 @@ func TestController_UpdatePlace(t *testing.T) {
 		reqBody := place.PlaceUpdateDTO{
 			ID:        1,
 			Name:      "Updated Place",
+			Capacity:  250,
 			Latitude:  11.11,
 			Longitude: 22.22,
 		}
@@ -142,12 +147,12 @@ func TestController_UpdatePlace(t *testing.T) {
 
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "places" WHERE "places"."id" = $1 ORDER BY "places"."id" LIMIT $2`)).
 			WithArgs(1, 1). // place.ID = 1
-			WillReturnRows(sqlmock.NewRows([]string{"id", "name", "image_link", "latitude", "longitude", "organisation_id"}).
-				AddRow(1, "Old Place", "http://old-image.com/img.jpg", 12.34, 56.78, 1))
+			WillReturnRows(sqlmock.NewRows([]string{"id", "name", "image_link", "capacity", "latitude", "longitude", "organisation_id"}).
+				AddRow(1, "Old Place", "http://old-image.com/img.jpg", 100, 12.34, 56.78, 1))
 
 		mock.ExpectBegin()
-		mock.ExpectExec(regexp.QuoteMeta(`UPDATE "places" SET "name"=$1,"image_link"=$2,"latitude"=$3,"longitude"=$4,"organisation_id"=$5 WHERE "id" = $6`)).
-			WithArgs(reqBody.Name, "http://old-image.com/img.jpg", reqBody.Latitude, reqBody.Longitude, int64(1), reqBody.ID).
+		mock.ExpectExec(regexp.QuoteMeta(`UPDATE "places" SET "name"=$1,"image_link"=$2,"capacity"=$3,"latitude"=$4,"longitude"=$5,"organisation_id"=$6 WHERE "id" = $7`)).
+			WithArgs(reqBody.Name, "http://old-image.com/img.jpg", reqBody.Capacity, reqBody.Latitude, reqBody.Longitude, int64(1), reqBody.ID).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
 
@@ -159,10 +164,11 @@ func TestController_UpdatePlace(t *testing.T) {
 		assert.Equal(t, "place updated successfully", response["message"])
 	})
 
-	t.Run("Forbidden - Not Owner", func(t *testing.T) {
+	t.Run("Invalid Place ID", func(t *testing.T) {
 		reqBody := place.PlaceUpdateDTO{
 			ID:        2,
 			Name:      "Updated Place",
+			Capacity:  250,
 			Latitude:  11.11,
 			Longitude: 22.22,
 		}
@@ -171,15 +177,21 @@ func TestController_UpdatePlace(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 
 		w := httptest.NewRecorder()
+
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "places"`)).
+			WithArgs(2, 1).
+			WillReturnError(gorm.ErrRecordNotFound)
+
 		r.ServeHTTP(w, req)
 
-		assert.Equal(t, http.StatusForbidden, w.Code)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 
 	t.Run("Place Not Found", func(t *testing.T) {
 		reqBody := place.PlaceUpdateDTO{
 			ID:        1,
 			Name:      "Updated Place",
+			Capacity:  250,
 			Latitude:  11.11,
 			Longitude: 22.22,
 		}
@@ -224,17 +236,24 @@ func TestController_DeletePlace(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
 
-	t.Run("Forbidden - Not Owner", func(t *testing.T) {
+	t.Run("Delete Unknown Place", func(t *testing.T) {
 		reqBody := struct {
 			ID int64 `json:"id"`
-		}{ID: 2} // place ID does not match user ID (1)
+		}{ID: 2}
 		jsonData, _ := json.Marshal(reqBody)
 		req, _ := http.NewRequest(http.MethodDelete, "/delete", bytes.NewBuffer(jsonData))
 		req.Header.Set("Content-Type", "application/json")
 
 		w := httptest.NewRecorder()
+
+		mock.ExpectBegin()
+		mock.ExpectExec(regexp.QuoteMeta(`DELETE FROM "places" WHERE "places"."id" = $1`)).
+			WithArgs(2).
+			WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectCommit()
+
 		r.ServeHTTP(w, req)
 
-		assert.Equal(t, http.StatusForbidden, w.Code)
+		assert.Equal(t, http.StatusOK, w.Code)
 	})
 }

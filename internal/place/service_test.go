@@ -28,13 +28,14 @@ func TestService_RegisterPlace(t *testing.T) {
 
 	dto := &place.PlaceRegisterDTO{
 		Name:      "New Place",
+		Capacity:  120,
 		Latitude:  12.34,
 		Longitude: 56.78,
 	}
 
 	mock.ExpectBegin()
-	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "places" ("name","image_link","latitude","longitude","organisation_id") VALUES ($1,$2,$3,$4,$5) RETURNING "id"`)).
-		WithArgs(dto.Name, "", dto.Latitude, dto.Longitude, int64(1)).
+	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "places" ("name","image_link","capacity","latitude","longitude","organisation_id") VALUES ($1,$2,$3,$4,$5,$6) RETURNING "id"`)).
+		WithArgs(dto.Name, "", dto.Capacity, dto.Latitude, dto.Longitude, int64(1)).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	mock.ExpectCommit()
 
@@ -106,18 +107,19 @@ func TestService_UpdatePlace(t *testing.T) {
 	dto := &place.PlaceUpdateDTO{
 		ID:        1,
 		Name:      "Updated Place",
+		Capacity:  240,
 		Latitude:  11.11,
 		Longitude: 22.22,
 	}
 
 	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "places" WHERE "places"."id" = $1 ORDER BY "places"."id" LIMIT $2`)).
 		WithArgs(1, 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "image_link", "latitude", "longitude", "organisation_id"}).
-			AddRow(1, "Old Place", "http://example.com/old.jpg", 12.34, 56.78, 1))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "image_link", "capacity", "latitude", "longitude", "organisation_id"}).
+			AddRow(1, "Old Place", "http://example.com/old.jpg", 100, 12.34, 56.78, 1))
 
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(`UPDATE "places" SET "name"=$1,"image_link"=$2,"latitude"=$3,"longitude"=$4,"organisation_id"=$5 WHERE "id" = $6`)).
-		WithArgs(dto.Name, "http://example.com/old.jpg", dto.Latitude, dto.Longitude, int64(1), dto.ID).
+	mock.ExpectExec(regexp.QuoteMeta(`UPDATE "places" SET "name"=$1,"image_link"=$2,"capacity"=$3,"latitude"=$4,"longitude"=$5,"organisation_id"=$6 WHERE "id" = $7`)).
+		WithArgs(dto.Name, "http://example.com/old.jpg", dto.Capacity, dto.Latitude, dto.Longitude, int64(1), dto.ID).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 

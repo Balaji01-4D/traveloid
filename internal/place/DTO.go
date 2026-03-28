@@ -3,6 +3,7 @@ package place
 type PlaceRegisterDTO struct {
 	Name      string  `json:"name" binding:"required"`
 	ImageLink string  `json:"image_link"`
+	Capacity  int64   `json:"capacity" binding:"required"`
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 }
@@ -10,6 +11,7 @@ type PlaceRegisterDTO struct {
 type PlaceUpdateDTO struct {
 	ID        int64   `json:"id" binding:"required"`
 	Name      string  `json:"name"`
+	Capacity  int64   `json:"capacity"`
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 }

@@ -17,6 +17,7 @@ func (s *Service) RegisterPlace(orgID int64, placeRegistrationDTO *PlaceRegister
 	place := &models.Place{
 		Name:           placeRegistrationDTO.Name,
 		ImageLink:      placeRegistrationDTO.ImageLink,
+		Capacity:       placeRegistrationDTO.Capacity,
 		Latitude:       placeRegistrationDTO.Latitude,
 		Longitude:      placeRegistrationDTO.Longitude,
 		OrganisationID: orgID,
@@ -42,6 +43,7 @@ func (s *Service) UpdatePlace(place *PlaceUpdateDTO) error {
 	}
 
 	existingPlace.Name = place.Name
+	existingPlace.Capacity = place.Capacity
 	existingPlace.Latitude = place.Latitude
 	existingPlace.Longitude = place.Longitude
 
