@@ -1,0 +1,53 @@
+package place
+
+import (
+	"go-auth-template/internal/models"
+)
+
+type Service struct {
+	repository *Repository
+}
+
+func NewService(r *Repository) *Service {
+	return &Service{repository: r}
+}
+
+func (s *Service) RegisterPlace(userID int64, placeRegistrationDTO *PlaceRegisterDTO) (*models.Place, error) {
+
+	place := &models.Place{
+		Name:      placeRegistrationDTO.Name,
+		ImageLink: placeRegistrationDTO.ImageLink,
+		Latitude:  placeRegistrationDTO.Latitude,
+		Longitude: placeRegistrationDTO.Longitude,
+		CreatedBy: userID,
+	}
+	if err := s.repository.CreatePlace(place); err != nil {
+		return nil, err
+	}
+	return place, nil
+}
+
+func (s *Service) GetPlace(id int64) (*models.Place, error) {
+	return s.repository.GetPlaceByID(id)
+}
+
+func (s *Service) GetPlacesByUserID(userID int64) ([]models.Place, error) {
+	return s.repository.GetPlacesByUserID(userID)
+}
+
+func (s *Service) UpdatePlace(place *PlaceUpdateDTO) error {
+	existingPlace, err := s.repository.GetPlaceByID(place.ID)
+	if err != nil {
+		return err
+	}
+
+	existingPlace.Name = place.Name
+	existingPlace.Latitude = place.Latitude
+	existingPlace.Longitude = place.Longitude
+
+	return s.repository.UpdatePlace(existingPlace)
+}
+
+func (s *Service) DeletePlace(id int64) error {
+	return s.repository.DeletePlace(id)
+}
