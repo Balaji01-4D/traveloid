@@ -44,6 +44,11 @@ clean:
 	@echo "Cleaning..."
 	@rm -f main
 
+
+migrate:
+	@echo "Running migrations..."
+	@go run ./migrate/migrate.go
+
 # Live Reload
 watch:
 	@if command -v air > /dev/null; then \
@@ -61,4 +66,4 @@ watch:
             fi; \
         fi
 
-.PHONY: all build run test clean watch docker-run docker-down itest
+.PHONY: all build run test clean watch docker-run docker-down migrate itest
