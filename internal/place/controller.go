@@ -31,7 +31,7 @@ func (ctrl *Controller) Register(c *gin.Context) {
 		return
 	}
 
-	u := user.(models.User)
+	u := user.(models.Member)
 	place, err := ctrl.service.RegisterPlace(u.ID, &placeDTO)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -41,19 +41,18 @@ func (ctrl *Controller) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"status": "place registered successfully",
 		"place": gin.H{
-			"id":    place.ID,
-			"name":  place.Name,
-                        "image_link": place.ImageLink,
-			"latitude":  place.Latitude,
-			"longitude": place.Longitude,
-			"created_by": place.CreatedBy,
+			"id":              place.ID,
+			"name":            place.Name,
+			"image_link":      place.ImageLink,
+			"latitude":        place.Latitude,
+			"longitude":       place.Longitude,
+			"organisation_id": place.OrganisationID,
 		},
 	})
 }
 
-
 func (ctrl *Controller) UpdatePlace(c *gin.Context) {
-	var placeDTO PlaceUpdateDTO 
+	var placeDTO PlaceUpdateDTO
 	if err := c.ShouldBindJSON(&placeDTO); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -65,7 +64,7 @@ func (ctrl *Controller) UpdatePlace(c *gin.Context) {
 		return
 	}
 
-	u := user.(models.User)
+	u := user.(models.Member)
 	if u.ID != placeDTO.ID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "you are not the owner of this place"})
 		return
@@ -82,7 +81,6 @@ func (ctrl *Controller) UpdatePlace(c *gin.Context) {
 	})
 }
 
-
 func (ctrl *Controller) DeletePlace(c *gin.Context) {
 	var placeDTO PlaceDeleteDTO
 	if err := c.ShouldBindJSON(&placeDTO); err != nil {
@@ -96,7 +94,7 @@ func (ctrl *Controller) DeletePlace(c *gin.Context) {
 		return
 	}
 
-	u := user.(models.User)
+	u := user.(models.Member)
 	if u.ID != placeDTO.ID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "you are not the owner of this place"})
 		return
@@ -112,7 +110,6 @@ func (ctrl *Controller) DeletePlace(c *gin.Context) {
 		"message": "place deleted successfully",
 	})
 }
-
 
 func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	repo := NewRepository(db)

@@ -37,16 +37,16 @@ func TestRepository_CreatePlace(t *testing.T) {
 	repo := place.NewRepository(db)
 
 	p := &models.Place{
-		Name:      "Eiffel Tower",
-ImageLink: "http://example.com/eiffel.jpg",
-		Latitude:  48.8584,
-		Longitude: 2.2945,
-		CreatedBy: 1,
+		Name:           "Eiffel Tower",
+		ImageLink:      "http://example.com/eiffel.jpg",
+		Latitude:       48.8584,
+		Longitude:      2.2945,
+		OrganisationID: 1,
 	}
 
 	mock.ExpectBegin()
-	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "places" ("name","image_link","latitude","longitude","created_by") VALUES ($1,$2,$3,$4,$5) RETURNING "id"`)).
-		WithArgs(p.Name, p.ImageLink, p.Latitude, p.Longitude, p.CreatedBy).
+	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "places" ("name","image_link","latitude","longitude","organisation_id") VALUES ($1,$2,$3,$4,$5) RETURNING "id"`)).
+		WithArgs(p.Name, p.ImageLink, p.Latitude, p.Longitude, p.OrganisationID).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	mock.ExpectCommit()
 
@@ -65,7 +65,7 @@ func TestRepository_GetPlaceByID(t *testing.T) {
 
 	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "places" WHERE "places"."id" = $1 ORDER BY "places"."id" LIMIT $2`)).
 		WithArgs(1, 1). // id 1, limit 1
-		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "latitude", "longitude", "created_by"}).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "latitude", "longitude", "organisation_id"}).
 			AddRow(1, "Eiffel Tower", 48.8584, 2.2945, 1))
 
 	p, err := repo.GetPlaceByID(1)
@@ -79,17 +79,17 @@ func TestRepository_GetPlaceByID(t *testing.T) {
 	}
 }
 
-func TestRepository_GetPlacesByUserID(t *testing.T) {
+func TestRepository_GetPlacesByOrganisationID(t *testing.T) {
 	db, mock := setupMockDB(t)
 	repo := place.NewRepository(db)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "places" WHERE created_by = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "places" WHERE organisation_id = $1`)).
 		WithArgs(1).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "latitude", "longitude", "created_by"}).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "latitude", "longitude", "organisation_id"}).
 			AddRow(1, "Eiffel Tower", 48.8584, 2.2945, 1).
 			AddRow(2, "Louvre Museum", 48.8606, 2.3376, 1))
 
-	places, err := repo.GetPlacesByUserID(1)
+	places, err := repo.GetPlacesByOrganisationID(1)
 	assert.NoError(t, err)
 	assert.Len(t, places, 2)
 	assert.Equal(t, "Eiffel Tower", places[0].Name)
@@ -105,16 +105,16 @@ func TestRepository_UpdatePlace(t *testing.T) {
 	repo := place.NewRepository(db)
 
 	p := &models.Place{
-		ID:        1,
-		Name:      "Eiffel Tower Updated",
-		Latitude:  48.8584,
-		Longitude: 2.2945,
-		CreatedBy: 1,
+		ID:             1,
+		Name:           "Eiffel Tower Updated",
+		Latitude:       48.8584,
+		Longitude:      2.2945,
+		OrganisationID: 1,
 	}
 
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(`UPDATE "places" SET "name"=$1,"image_link"=$2,"latitude"=$3,"longitude"=$4,"created_by"=$5 WHERE "id" = $6`)).
-		WithArgs(p.Name, p.ImageLink, p.Latitude, p.Longitude, p.CreatedBy, p.ID).
+	mock.ExpectExec(regexp.QuoteMeta(`UPDATE "places" SET "name"=$1,"image_link"=$2,"latitude"=$3,"longitude"=$4,"organisation_id"=$5 WHERE "id" = $6`)).
+		WithArgs(p.Name, p.ImageLink, p.Latitude, p.Longitude, p.OrganisationID, p.ID).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 

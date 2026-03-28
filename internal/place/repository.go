@@ -26,9 +26,9 @@ func (r *Repository) GetPlaceByID(id int64) (*models.Place, error) {
 	return &place, nil
 }
 
-func (r *Repository) GetPlacesByUserID(userID int64) ([]models.Place, error) {
+func (r *Repository) GetPlacesByOrganisationID(orgID int64) ([]models.Place, error) {
 	var places []models.Place
-	if err := r.DB.Where("created_by = ?", userID).Find(&places).Error; err != nil {
+	if err := r.DB.Where("organisation_id = ?", orgID).Find(&places).Error; err != nil {
 		return nil, err
 	}
 	return places, nil

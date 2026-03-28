@@ -1,11 +1,12 @@
-package user
+package member
 
 import (
+	"net/http"
+	"os"
+
 	"go-auth-template/internal/middlewares"
 	"go-auth-template/internal/models"
 	"go-auth-template/internal/utils"
-	"net/http"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -19,57 +20,20 @@ func NewController(s *Service) *Controller {
 	return &Controller{service: s}
 }
 
-func (ctrl *Controller) Register(c *gin.Context) {
-
-	var userDTO UserRegisterDTO
-	if err := c.ShouldBindJSON(&userDTO); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	user, err := ctrl.service.RegisterUser(&userDTO)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	token, err := utils.GenerateAccessToken(user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
-		return
-	}
-
-	domain := os.Getenv("COOKIE_DOMAIN")
-
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("Authorization", token, 3600*24*30, "/", domain, false, true)
-
-	c.JSON(http.StatusCreated, gin.H{
-		"status": "user registered successfully",
-		"user": gin.H{
-			"id":    user.ID,
-			"email": user.Email,
-			"name":  user.Name,
-		},
-		"token": token,
-	})
-}
-
 func (ctrl *Controller) Login(c *gin.Context) {
-
-	var loginDTO UserLoginDTO
+	var loginDTO MemberLoginDTO
 	if err := c.ShouldBindJSON(&loginDTO); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	user, err := ctrl.service.AuthenticateUser(loginDTO.Email, loginDTO.Password)
+	member, err := ctrl.service.AuthenticateUser(loginDTO.Email, loginDTO.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
 
-	token, err := utils.GenerateAccessToken(user.ID)
+	token, err := utils.GenerateAccessToken(member.ID, member.OrganisationID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
 		return
@@ -83,29 +47,29 @@ func (ctrl *Controller) Login(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"status": "user login successfully",
 		"user": gin.H{
-			"id":    user.ID,
-			"email": user.Email,
-			"name":  user.Name,
+			"id":              member.ID,
+			"email":           member.Email,
+			"name":            member.Name,
+			"organisation_id": member.OrganisationID,
 		},
 		"token": token,
 	})
 }
 
 func (ctrl *Controller) Me(c *gin.Context) {
-			
-			user, exists := c.Get("user")
-			if !exists {
-				c.AbortWithStatus(http.StatusUnauthorized)
-				return
-			}
+	member, exists := c.Get("member")
+	if !exists {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
 
-			u := user.(models.User)
+	u := member.(models.Member)
 
-			c.JSON(http.StatusOK, gin.H{
-				"id":    u.ID,
-				"name":  u.Name,
-				"email": u.Email,
-			})
+	c.JSON(http.StatusOK, gin.H{
+		"id":    u.ID,
+		"name":  u.Name,
+		"email": u.Email,
+	})
 }
 
 func (ctrl *Controller) Logout(c *gin.Context) {
@@ -126,13 +90,13 @@ func (ctrl *Controller) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	user, exists := c.Get("user")
+	member, exists := c.Get("member")
 	if !exists {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
-	
-	u := user.(models.User)
+
+	u := member.(models.Member)
 	err := ctrl.service.ChangePassword(u.ID, pwdDTO.OldPassword, pwdDTO.NewPassword)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -145,13 +109,13 @@ func (ctrl *Controller) ChangePassword(c *gin.Context) {
 }
 
 func (ctrl *Controller) DeleteAccount(c *gin.Context) {
-	user, exists := c.Get("user")
+	member, exists := c.Get("member")
 	if !exists {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 
-	u := user.(models.User)
+	u := member.(models.Member)
 	err := ctrl.service.DeleteUser(u.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -175,7 +139,6 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 
 	users := r.Group("/auth")
 	{
-		users.POST("/register", ctrl.Register)
 		users.POST("/login", ctrl.Login)
 		users.GET("/me", middlewares.RequireAuth(db), ctrl.Me)
 		users.POST("/logout", middlewares.RequireAuth(db), ctrl.Logout)

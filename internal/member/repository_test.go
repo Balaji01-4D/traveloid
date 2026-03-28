@@ -1,4 +1,4 @@
-package user_test
+package member_test
 
 import (
 	"regexp"
@@ -9,8 +9,8 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
+	"go-auth-template/internal/member"
 	"go-auth-template/internal/models"
-	"go-auth-template/internal/user"
 )
 
 func setupMockDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
@@ -34,9 +34,9 @@ func setupMockDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
 
 func TestRepository_CreateUser(t *testing.T) {
 	db, mock := setupMockDB(t)
-	repo := user.NewRepository(db)
+	repo := member.NewRepository(db)
 
-	u := &models.User{
+	u := &models.Member{
 		Name:     "Test User",
 		Email:    "test@example.com",
 		Password: "hashedpassword",
@@ -59,7 +59,7 @@ func TestRepository_CreateUser(t *testing.T) {
 
 func TestRepository_GetUserByID(t *testing.T) {
 	db, mock := setupMockDB(t)
-	repo := user.NewRepository(db)
+	repo := member.NewRepository(db)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE "users"."id" = $1 ORDER BY "users"."id" LIMIT $2`)).
 		WithArgs(1, 1). // id 1, limit 1 (because First uses limit 1)
@@ -79,7 +79,7 @@ func TestRepository_GetUserByID(t *testing.T) {
 
 func TestRepository_GetUserByEmail(t *testing.T) {
 	db, mock := setupMockDB(t)
-	repo := user.NewRepository(db)
+	repo := member.NewRepository(db)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE email = $1 ORDER BY "users"."id" LIMIT $2`)).
 		WithArgs("test@example.com", 1).
@@ -98,9 +98,9 @@ func TestRepository_GetUserByEmail(t *testing.T) {
 
 func TestRepository_UpdateUser(t *testing.T) {
 	db, mock := setupMockDB(t)
-	repo := user.NewRepository(db)
+	repo := member.NewRepository(db)
 
-	u := &models.User{
+	u := &models.Member{
 		ID:       1,
 		Name:     "Updated User",
 		Email:    "update@example.com",
@@ -123,7 +123,7 @@ func TestRepository_UpdateUser(t *testing.T) {
 
 func TestRepository_DeleteUser(t *testing.T) {
 	db, mock := setupMockDB(t)
-	repo := user.NewRepository(db)
+	repo := member.NewRepository(db)
 
 	mock.ExpectBegin()
 	mock.ExpectExec(regexp.QuoteMeta(`DELETE FROM "users" WHERE "users"."id" = $1`)).
