@@ -21,13 +21,28 @@ func Migrate() {
 		panic("failed to connect database")
 	}
 
+	// Migrate enum types
+	MigrateEnum(db)
+
 	// Migrate the schema
-	err = db.AutoMigrate(&models.User{})
+	err = db.AutoMigrate(&models.Organisation{})
+	err = db.AutoMigrate(&models.Member{})
+	err = db.AutoMigrate(&models.Place{})
 	if err != nil {
 		panic("failed to migrate database")
 	}
 
 	fmt.Println("Database migration completed successfully.")
+}
+
+func MigrateEnum(db *gorm.DB) {
+	db.Exec(`
+DO $$ BEGIN
+	CREATE TYPE role_enum AS ENUM ('admin', 'member');
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+`)
 }
 
 func main() {
