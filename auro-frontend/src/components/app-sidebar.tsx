@@ -1,6 +1,7 @@
 import * as React from "react"
 import { useEffect, useState } from "react"
 import {
+  ChartArea,
   MapPin,
   Users,
   Settings
@@ -20,6 +21,11 @@ import api, { getCurrentUser } from "@/lib/api"
 import OrganisationIcon from "@/components/icons/OrganisationIcon"
 
 const adminNavMain = [
+  {
+    title: "Overview",
+    url: "/dashboard/overview",
+    icon: ChartArea,
+  },
   {
     title: "Places",
     url: "/dashboard/places",
@@ -55,6 +61,11 @@ const adminNavMain = [
 ]
 
 const memberNavMain = [
+  {
+    title: "Overview",
+    url: "/dashboard/overview",
+    icon: ChartArea,
+  },
   {
     title: "Places",
     url: "/dashboard/places",

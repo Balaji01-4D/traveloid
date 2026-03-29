@@ -7,6 +7,8 @@ import MembersPage from './pages/MembersPage'
 import InviteMemberPage from './pages/InviteMemberPage'
 import PlacesPage from './pages/PlacesPage'
 import AddPlacePage from './pages/AddPlacePage'
+import OverviewPage from './pages/dashboard/OverviewPage'
+import PlaceDetailPage from './pages/dashboard/PlaceDetailPage'
 import AuthLayout from './layouts/AuthLayout'
 import { Toaster } from '@/components/ui/sonner'
 import RequireAuth from '@/components/RequireAuth'
@@ -29,8 +31,10 @@ function App() {
           {/* Dashboard Routes wrapper */}
           <Route element={<RequireAuth />}>
             <Route path="/dashboard" element={<DashboardPage />}>
+              <Route path="overview" element={<OverviewPage />} />
               <Route path="places" element={<PlacesPage />} />
               <Route path="places/new" element={<AddPlacePage />} />
+              <Route path="places/:placeId" element={<PlaceDetailPage />} />
 
               <Route element={<RequireRole allowedRoles={['admin']} />}>
                 <Route path="members">

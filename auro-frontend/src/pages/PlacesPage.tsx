@@ -87,10 +87,10 @@ export default function PlacesPage() {
                 </CardHeader>
                 <CardFooter className='gap-3 max-sm:flex-col max-sm:items-stretch'>
                   <Button asChild>
-                    <a href={imageLink} target='_blank' rel='noreferrer'>
+                    <Link to={`/dashboard/places/${place.id}`}>
                       <ImageIcon className='mr-2 h-4 w-4' />
                       Open Analysis
-                    </a>
+                    </Link>
                   </Button>
                   <Button asChild variant='outline'>
                     <a href={mapLink} target='_blank' rel='noreferrer' aria-label='Open map' title='Open map'>

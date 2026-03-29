@@ -117,7 +117,7 @@ export interface GetPlacesResponse {
 }
 
 export async function getPlaces(): Promise<GetPlacesResponse> {
-  const { data } = await api.get<GetPlacesResponse>('/auth/places')
+  const { data } = await api.get<GetPlacesResponse>('/places')
   return data
 }
 
@@ -130,5 +130,163 @@ export interface CreatePlacePayload {
 }
 
 export async function createPlace(payload: CreatePlacePayload): Promise<void> {
-  await api.post('/auth/places', payload)
+  await api.post('/places', payload)
+}
+
+export interface CurrentActual {
+  timestamp: string
+  count: number
+  percent_capacity: number
+}
+
+export interface CurrentPrediction {
+  timestamp: string
+  predicted: number
+  upper_bound: number
+  lower_bound: number
+  percent_capacity: number
+}
+
+export interface PlaceCurrentResponse {
+  place_id: number
+  as_of: string
+  capacity: number
+  latest_actual: CurrentActual | null
+  next_predictions: CurrentPrediction[]
+}
+
+export interface TimeSeriesPoint {
+  timestamp: string
+  actual: number | null
+  predicted: number | null
+}
+
+export interface PlaceTimeSeriesResponse {
+  place_id: number
+  start: string
+  end: string
+  interval: 'hour' | 'day'
+  timeseries: TimeSeriesPoint[]
+}
+
+export interface CrowdHeatmapResponse {
+  place_id: number
+  range: string
+  start: string
+  end: string
+  heatmap: Array<Array<number | null>>
+}
+
+export interface CrowdPeaksResponse {
+  place_id: number
+  range: string
+  start: string
+  end: string
+  busiest_hour: {
+    hour: number
+    avg_count: number
+  } | null
+  least_crowded_time: {
+    day_of_week: number
+    hour: number
+    avg_count: number
+  } | null
+}
+
+export interface ForecastPoint {
+  timestamp: string
+  count: number
+  upper_bound: number
+  lower_bound: number
+}
+
+export interface ForecastNextResponse {
+  place_id: number
+  hours: number
+  start: string
+  end: string
+  forecast: ForecastPoint[]
+}
+
+export interface ForecastResponse {
+  place_id: number
+  start: string
+  end: string
+  forecast: ForecastPoint[]
+}
+
+export interface ForecastAlert {
+  timestamp: string
+  predicted_count: number
+  upper_bound: number
+  lower_bound: number
+  capacity: number
+  overload_by: number
+}
+
+export interface ForecastAlertsResponse {
+  place_id: number
+  start: string
+  end: string
+  overload_count: number
+  alerts: ForecastAlert[]
+}
+
+export async function getPlaceCurrent(placeId: number): Promise<PlaceCurrentResponse> {
+  const { data } = await api.get<PlaceCurrentResponse>(`/places/${placeId}/current`)
+  return data
+}
+
+export async function getPlaceTimeSeries(
+  placeId: number,
+  start: Date,
+  end: Date,
+  interval: 'hour' | 'day' = 'hour',
+): Promise<PlaceTimeSeriesResponse> {
+  const params = new URLSearchParams({
+    start: start.toISOString(),
+    end: end.toISOString(),
+    interval,
+  })
+
+  const { data } = await api.get<PlaceTimeSeriesResponse>(`/places/${placeId}/timeseries?${params.toString()}`)
+  return data
+}
+
+export async function getPlaceCrowdHeatmap(placeId: number, range = '30d'): Promise<CrowdHeatmapResponse> {
+  const { data } = await api.get<CrowdHeatmapResponse>(`/places/${placeId}/crowd/heatmap?range=${encodeURIComponent(range)}`)
+  return data
+}
+
+export async function getPlaceCrowdPeaks(placeId: number, range = '7d'): Promise<CrowdPeaksResponse> {
+  const { data } = await api.get<CrowdPeaksResponse>(`/places/${placeId}/crowd/peaks?range=${encodeURIComponent(range)}`)
+  return data
+}
+
+export async function getPlaceForecastNext(placeId: number, hours = 24): Promise<ForecastNextResponse> {
+  const { data } = await api.get<ForecastNextResponse>(`/places/${placeId}/forecast/next?hours=${hours}`)
+  return data
+}
+
+export async function getPlaceForecast(
+  placeId: number,
+  start?: Date,
+  end?: Date,
+): Promise<ForecastResponse> {
+  const params = new URLSearchParams()
+  if (start) {
+    params.set('start', start.toISOString())
+  }
+  if (end) {
+    params.set('end', end.toISOString())
+  }
+
+  const suffix = params.size > 0 ? `?${params.toString()}` : ''
+  const { data } = await api.get<ForecastResponse>(`/places/${placeId}/forecast${suffix}`)
+  return data
+}
+
+export async function getPlaceForecastAlerts(placeId: number): Promise<ForecastAlertsResponse> {
+  const { data } = await api.get<ForecastAlertsResponse>(`/places/${placeId}/forecast/alerts`)
+  return data
 }
