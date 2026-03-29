@@ -109,16 +109,19 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	svc := NewService(repo)
 	ctrl := NewController(svc)
 
-	users := r.Group("/auth")
+	place := r.Group("/places")
 	{
-		users.GET("/places", middlewares.RequireAuth(db), ctrl.GetPlaces)
-		users.POST("/places", middlewares.RequireAuth(db), ctrl.Register)
-		users.PUT("/places", middlewares.RequireAuth(db), ctrl.UpdatePlace)
-		users.DELETE("/places", middlewares.RequireAuth(db), ctrl.DeletePlace)
-
-		// Legacy route aliases for compatibility.
-		users.POST("/register", middlewares.RequireAuth(db), ctrl.Register)
-		users.PUT("/update-place", middlewares.RequireAuth(db), ctrl.UpdatePlace)
-		users.DELETE("/delete-place", middlewares.RequireAuth(db), ctrl.DeletePlace)
+		place.GET("", middlewares.RequireAuth(db), ctrl.GetPlaces)
+		place.GET("/:place_id/crowd", middlewares.RequireAuth(db), ctrl.GetCrowdData)
+		place.GET("/:place_id/crowd/heatmap", middlewares.RequireAuth(db), ctrl.GetCrowdHeatmap)
+		place.GET("/:place_id/crowd/peaks", middlewares.RequireAuth(db), ctrl.GetCrowdPeaks)
+		place.GET("/:place_id/forecast", middlewares.RequireAuth(db), ctrl.GetForecast)
+		place.GET("/:place_id/forecast/next", middlewares.RequireAuth(db), ctrl.GetForecastNext)
+		place.GET("/:place_id/forecast/alerts", middlewares.RequireAuth(db), ctrl.GetForecastAlerts)
+		place.GET("/:place_id/timeseries", middlewares.RequireAuth(db), ctrl.GetTimeSeries)
+		place.GET("/:place_id/current", middlewares.RequireAuth(db), ctrl.GetCurrent)
+		place.POST("", middlewares.RequireAuth(db), ctrl.Register)
+		place.PUT("", middlewares.RequireAuth(db), ctrl.UpdatePlace)
+		place.DELETE("", middlewares.RequireAuth(db), ctrl.DeletePlace)
 	}
 }
