@@ -120,8 +120,23 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 		place.GET("/:place_id/forecast/alerts", middlewares.RequireAuth(db), ctrl.GetForecastAlerts)
 		place.GET("/:place_id/timeseries", middlewares.RequireAuth(db), ctrl.GetTimeSeries)
 		place.GET("/:place_id/current", middlewares.RequireAuth(db), ctrl.GetCurrent)
+		place.POST("/:place_id/bootstrap", middlewares.RequireAuth(db), ctrl.BootstrapPlaceData)
 		place.POST("", middlewares.RequireAuth(db), ctrl.Register)
 		place.PUT("", middlewares.RequireAuth(db), ctrl.UpdatePlace)
 		place.DELETE("", middlewares.RequireAuth(db), ctrl.DeletePlace)
+	}
+
+	publicPlace := r.Group("/public/organisations/:org_id/places")
+	{
+		publicPlace.Use(middlewares.PublicOrgMiddleware())
+		publicPlace.GET("", ctrl.GetPlaces)
+		publicPlace.GET("/:place_id/crowd", ctrl.GetCrowdData)
+		publicPlace.GET("/:place_id/crowd/heatmap", ctrl.GetCrowdHeatmap)
+		publicPlace.GET("/:place_id/crowd/peaks", ctrl.GetCrowdPeaks)
+		publicPlace.GET("/:place_id/forecast", ctrl.GetForecast)
+		publicPlace.GET("/:place_id/forecast/next", ctrl.GetForecastNext)
+		publicPlace.GET("/:place_id/forecast/alerts", ctrl.GetForecastAlerts)
+		publicPlace.GET("/:place_id/timeseries", ctrl.GetTimeSeries)
+		publicPlace.GET("/:place_id/current", ctrl.GetCurrent)
 	}
 }

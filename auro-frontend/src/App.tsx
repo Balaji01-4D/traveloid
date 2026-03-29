@@ -13,13 +13,19 @@ import AuthLayout from './layouts/AuthLayout'
 import { Toaster } from '@/components/ui/sonner'
 import RequireAuth from '@/components/RequireAuth'
 import RequireRole from '@/components/RequireRole'
+import OrganisationsPage from './pages/public/OrganisationsPage'
+import PublicOverviewPage from './pages/public/PublicOverviewPage'
+import PublicPlaceDetailPage from './pages/public/PublicPlaceDetailPage'
 
 function App() {
   return (
     <>
       <Router>
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Public Routes */}
+          <Route path="/" element={<OrganisationsPage />} />
+          <Route path="/org/:orgId" element={<PublicOverviewPage />} />
+          <Route path="/org/:orgId/places/:placeId" element={<PublicPlaceDetailPage />} />
           
           {/* Auth Routes */}
           <Route element={<AuthLayout />}>

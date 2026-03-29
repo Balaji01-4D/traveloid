@@ -26,6 +26,14 @@ func (r *Repository) GetOrgByID(id int64) (*models.Organisation, error) {
 	return &org, nil
 }
 
+func (r *Repository) GetAllOrgs() ([]models.Organisation, error) {
+	var orgs []models.Organisation
+	if err := r.DB.Find(&orgs).Error; err != nil {
+		return nil, err
+	}
+	return orgs, nil
+}
+
 func (r *Repository) GetOrgMembers(id int64) ([]models.Member, error) {
 	var members []models.Member
 	if err := r.DB.Find(&members, "organisation_id = ?", id).Error; err != nil {

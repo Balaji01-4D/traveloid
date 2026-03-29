@@ -134,6 +134,23 @@ func (r *Repository) GetLeastCrowdedTime(placeID int64, start time.Time, end tim
 	return row, nil
 }
 
+func (r *Repository) GetHourlyCrowdProfile(placeID int64, start time.Time, end time.Time) ([]CrowdHourPeak, error) {
+	rows := make([]CrowdHourPeak, 0)
+
+	err := r.DB.Model(&models.PlaceCrowdData{}).
+		Select("EXTRACT(HOUR FROM timestamp AT TIME ZONE 'Asia/Kolkata')::int AS hour, AVG(count)::float8 AS avg_count").
+		Where("place_id = ? AND timestamp >= ? AND timestamp <= ?", placeID, start, end).
+		Group("hour").
+		Order("hour ASC").
+		Scan(&rows).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
+}
+
 func (r *Repository) GetForecast(placeID int64, start time.Time, end time.Time) ([]ForecastPoint, error) {
 	rows := make([]ForecastPoint, 0)
 
@@ -148,6 +165,30 @@ func (r *Repository) GetForecast(placeID int64, start time.Time, end time.Time) 
 	}
 
 	return rows, nil
+}
+
+func (r *Repository) DeleteCrowdDataRange(placeID int64, start time.Time, end time.Time) error {
+	return r.DB.Where("place_id = ? AND timestamp >= ? AND timestamp <= ?", placeID, start, end).
+		Delete(&models.PlaceCrowdData{}).Error
+}
+
+func (r *Repository) DeleteForecastRange(placeID int64, start time.Time, end time.Time) error {
+	return r.DB.Where("place_id = ? AND timestamp >= ? AND timestamp <= ?", placeID, start, end).
+		Delete(&models.Forecast{}).Error
+}
+
+func (r *Repository) InsertCrowdDataBatch(rows []models.PlaceCrowdData) error {
+	if len(rows) == 0 {
+		return nil
+	}
+	return r.DB.CreateInBatches(rows, 200).Error
+}
+
+func (r *Repository) InsertForecastBatch(rows []models.Forecast) error {
+	if len(rows) == 0 {
+		return nil
+	}
+	return r.DB.CreateInBatches(rows, 200).Error
 }
 
 func (r *Repository) GetForecastOverloads(placeID int64, start time.Time, end time.Time, capacity int64) ([]ForecastAlert, error) {
@@ -191,6 +232,30 @@ func (r *Repository) GetLatestActual(placeID int64, asOf time.Time) (*ActualPoin
 		Order("timestamp DESC").
 		Limit(1).
 		Scan(row)
+
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	if tx.RowsAffected == 0 {
+		return nil, nil
+	}
+
+	return row, nil
+}
+
+func (r *Repository) GetNearestActual(placeID int64, around time.Time, window time.Duration) (*ActualPoint, error) {
+	row := &ActualPoint{}
+	start := around.Add(-window)
+	end := around.Add(window)
+
+	tx := r.DB.Raw(`
+		SELECT timestamp, count
+		FROM place_crowd_data
+		WHERE place_id = ? AND timestamp >= ? AND timestamp <= ?
+		ORDER BY ABS(EXTRACT(EPOCH FROM (timestamp - ?::timestamptz))) ASC, timestamp DESC
+		LIMIT 1
+	`, placeID, start, end, around).Scan(row)
 
 	if tx.Error != nil {
 		return nil, tx.Error

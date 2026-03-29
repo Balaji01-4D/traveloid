@@ -1,12 +1,8 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
-import ReactECharts from 'echarts-for-react'
 import { AlertTriangle, ArrowLeft, Gauge } from 'lucide-react'
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -22,6 +18,7 @@ import {
   getPlaceForecast,
   getPlaceForecastAlerts,
   getPlaceForecastNext,
+  bootstrapPlaceData,
   getPlaces,
 } from '@/lib/api'
 import { formatISTDateTime } from '@/lib/time'
@@ -49,8 +46,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import ActualVsPredictedPanel from '@/components/dashboard/ActualVsPredictedPanel'
 import ForecastDistributionPanel from '@/components/dashboard/ForecastDistributionPanel'
 import CapacityUtilizationPanel from '@/components/dashboard/CapacityUtilizationPanel'
-
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+import CrowdHeatmapPanel from '@/components/dashboard/CrowdHeatmapPanel'
+import PeakHoursPanel from '@/components/dashboard/PeakHoursPanel'
+import ChartFullscreen from '@/components/dashboard/ChartFullscreen'
 
 const ANALYSIS_OPTIONS = {
   actual_predicted: {
@@ -92,6 +90,7 @@ export default function PlaceDetailPage() {
   const params = useParams()
   const placeId = Number(params.placeId)
   const [analysis, setAnalysis] = useState<AnalysisKey>('actual_predicted')
+  const queryClient = useQueryClient()
 
   const placesQuery = useQuery({
     queryKey: ['places'],
@@ -140,79 +139,19 @@ export default function PlaceDetailPage() {
     enabled: Number.isFinite(placeId) && analysis === 'alerts',
   })
 
-  const heatmapOption = useMemo(() => {
-    const heatmap = heatmapQuery.data?.heatmap ?? []
-    const matrix: Array<[number, number, number]> = []
-    let max = 0
-
-    heatmap.forEach((row, day) => {
-      row.forEach((value, hour) => {
-        const safeValue = value ?? 0
-        matrix.push([hour, day, safeValue])
-        if (safeValue > max) {
-          max = safeValue
-        }
-      })
-    })
-
-    return {
-      tooltip: {
-        position: 'top',
-        formatter: (params: { data: [number, number, number] }) => {
-          const [hour, day, count] = params.data
-          return `${DAYS[day]} ${hour}:00<br/>Avg crowd: ${count.toFixed(1)}`
-        },
-      },
-      grid: {
-        left: 70,
-        right: 40,
-        top: 30,
-        bottom: 30,
-      },
-      xAxis: {
-        type: 'category',
-        data: Array.from({ length: 24 }, (_, index) => String(index)),
-      },
-      yAxis: {
-        type: 'category',
-        data: DAYS,
-      },
-      visualMap: {
-        min: 0,
-        max: max || 10,
-        calculable: true,
-        orient: 'horizontal' as const,
-        left: 'center' as const,
-        bottom: 0,
-      },
-      series: [
-        {
-          name: 'Avg crowd',
-          type: 'heatmap',
-          data: matrix,
-          emphasis: {
-            itemStyle: {
-              borderColor: '#fff',
-              borderWidth: 1,
-            },
-          },
-        },
-      ],
-    }
-  }, [heatmapQuery.data?.heatmap])
-
-  const peaksData = useMemo(() => {
-    return [
-      {
-        label: 'Busiest hour',
-        value: peaksQuery.data?.busiest_hour?.avg_count ?? 0,
-      },
-      {
-        label: 'Least crowded',
-        value: peaksQuery.data?.least_crowded_time?.avg_count ?? 0,
-      },
-    ]
-  }, [peaksQuery.data?.busiest_hour, peaksQuery.data?.least_crowded_time])
+  const bootstrapMutation = useMutation({
+    mutationFn: () => bootstrapPlaceData(placeId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['place-current', placeId] }),
+        queryClient.invalidateQueries({ queryKey: ['place-peaks', placeId] }),
+        queryClient.invalidateQueries({ queryKey: ['place-heatmap', placeId] }),
+        queryClient.invalidateQueries({ queryKey: ['place-alerts', placeId] }),
+        queryClient.invalidateQueries({ queryKey: ['place-forecast', placeId] }),
+        queryClient.invalidateQueries({ queryKey: ['place-forecast-next', placeId, 24] }),
+      ])
+    },
+  })
 
   const shortTermData = useMemo(() => {
     return (forecastNextQuery.data?.forecast ?? []).map((point) => ({
@@ -250,7 +189,9 @@ export default function PlaceDetailPage() {
             <CardTitle className="text-3xl">{currentQuery.data?.latest_actual?.count ?? '--'}</CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">
-            {(currentQuery.data?.latest_actual?.percent_capacity ?? 0).toFixed(1)}% of configured capacity.
+            {currentQuery.data?.latest_actual
+              ? `${(currentQuery.data.latest_actual.percent_capacity ?? 0).toFixed(1)}% of configured capacity.`
+              : 'No recent live occupancy sample.'}
           </CardContent>
         </Card>
 
@@ -308,7 +249,7 @@ export default function PlaceDetailPage() {
             heatmapQuery.isLoading ? (
               <Skeleton className="h-[420px] w-full" />
             ) : (
-              <ReactECharts option={heatmapOption} style={{ height: '420px', width: '100%' }} />
+              <CrowdHeatmapPanel heatmap={heatmapQuery.data?.heatmap ?? []} />
             )
           )}
 
@@ -334,28 +275,25 @@ export default function PlaceDetailPage() {
           {analysis === 'peaks' && (
             peaksQuery.isLoading ? (
               <Skeleton className="h-[320px] w-full" />
-            ) : (
+            ) : (peaksQuery.data?.hourly_profile.length ?? 0) === 0 ? (
               <div className="space-y-3">
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={peaksData} margin={{ left: 0, right: 8, top: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="label" />
-                    <YAxis />
-                    <Tooltip
-                      formatter={(value) => {
-                        if (typeof value !== 'number') {
-                          return ['-', 'Avg crowd']
-                        }
-                        return [value.toFixed(1), 'Avg crowd']
-                      }}
-                    />
-                    <Bar dataKey="value" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-                <div className="text-sm text-muted-foreground">
-                  Busiest hour: {peaksQuery.data?.busiest_hour ? `${peaksQuery.data.busiest_hour.hour}:00` : '-'} | Least crowded: {peaksQuery.data?.least_crowded_time ? `${DAYS[peaksQuery.data.least_crowded_time.day_of_week]} ${peaksQuery.data.least_crowded_time.hour}:00` : '-'}
-                </div>
+                <p className="text-sm text-muted-foreground">No peak-hours data available for this place yet.</p>
+                <Button
+                  size="sm"
+                  onClick={() => bootstrapMutation.mutate()}
+                  disabled={bootstrapMutation.isPending}
+                >
+                  {bootstrapMutation.isPending ? 'Generating data...' : 'Generate sample data'}
+                </Button>
+                {bootstrapMutation.isError && (
+                  <p className="text-sm text-destructive">Failed to generate data. Please try again.</p>
+                )}
               </div>
+            ) : (
+              <PeakHoursPanel
+                data={peaksQuery.data}
+                capacity={currentQuery.data?.capacity ?? place?.capacity ?? 0}
+              />
             )
           )}
 
@@ -390,14 +328,18 @@ export default function PlaceDetailPage() {
             forecastNextQuery.isLoading ? (
               <Skeleton className="h-[180px] w-full" />
             ) : (
-              <ResponsiveContainer width="100%" height={180}>
-                <LineChart data={shortTermData} margin={{ left: 0, right: 8, top: 4 }}>
-                  <XAxis dataKey="timestamp" tickFormatter={(value) => formatFullDateTime(value)} minTickGap={24} />
-                  <YAxis hide />
-                  <Tooltip labelFormatter={(value) => formatFullDateTime(value)} />
-                  <Line type="monotone" dataKey="predicted" stroke="hsl(var(--primary))" strokeWidth={2.2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
+              <ChartFullscreen title="Short-term trend chart">
+                {(isFullscreen) => (
+                  <ResponsiveContainer width="100%" height={isFullscreen ? 520 : 180}>
+                    <LineChart data={shortTermData} margin={{ left: 0, right: 8, top: 4 }}>
+                      <XAxis dataKey="timestamp" tickFormatter={(value) => formatFullDateTime(value)} minTickGap={24} />
+                      <YAxis hide />
+                      <Tooltip labelFormatter={(value) => formatFullDateTime(value)} />
+                      <Line type="monotone" dataKey="predicted" stroke="hsl(var(--primary))" strokeWidth={2.2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </ChartFullscreen>
             )
           )}
         </CardContent>

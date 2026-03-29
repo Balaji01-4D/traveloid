@@ -48,6 +48,10 @@ func (s *Service) GetOrg(id int64) (*models.Organisation, error) {
 	return s.repository.GetOrgByID(id)
 }
 
+func (s *Service) GetAllOrgs() ([]models.Organisation, error) {
+	return s.repository.GetAllOrgs()
+}
+
 func (s *Service) CheckOrgNameExists(name string) (bool, error) {
 	return s.repository.CheckOrgNameExists(name)
 }

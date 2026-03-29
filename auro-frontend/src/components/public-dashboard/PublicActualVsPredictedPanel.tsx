@@ -14,8 +14,8 @@ import {
 } from 'recharts'
 
 import {
-  getPlaceForecastNext,
-  getPlaceTimeSeries,
+  getPublicPlaceForecastNext,
+  getPublicPlaceTimeSeries,
 } from '@/lib/api'
 import {
   floorToISTIntervalMs,
@@ -153,11 +153,12 @@ function CoreChartTooltip({
   )
 }
 
-export default function ActualVsPredictedPanel({
-  placeId,
+export default function PublicActualVsPredictedPanel({
+  orgId, placeId,
   capacity,
   active,
 }: {
+  orgId: number
   placeId: number
   capacity: number
   active: boolean
@@ -189,15 +190,15 @@ export default function ActualVsPredictedPanel({
 
   const timeseriesQuery = useQuery({
     queryKey: [
-      'place-timeseries',
-      placeId,
+      'public-place-timeseries',
+      orgId, placeId,
       'core',
       timeRangeStartKey,
       timeRangeEndKey,
       selectedTimeRange.interval,
     ],
-    queryFn: () => getPlaceTimeSeries(
-      placeId,
+    queryFn: () => getPublicPlaceTimeSeries(
+      orgId, placeId,
       alignedTimeRange.start,
       alignedTimeRange.end,
       selectedTimeRange.interval,
@@ -221,8 +222,8 @@ export default function ActualVsPredictedPanel({
   }, [alignedTimeRange.end, selectedTimeRange.valid])
 
   const forecastConfidenceQuery = useQuery({
-    queryKey: ['place-forecast-next', placeId, 'core-confidence', confidenceHours],
-    queryFn: () => getPlaceForecastNext(placeId, confidenceHours),
+    queryKey: ['public-place-forecast-next', orgId, placeId, 'core-confidence', confidenceHours],
+    queryFn: () => getPublicPlaceForecastNext(orgId, placeId, confidenceHours),
     enabled: Number.isFinite(placeId) && active && selectedTimeRange.valid && confidenceHours > 0,
   })
 

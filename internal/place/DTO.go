@@ -40,6 +40,9 @@ type CrowdHourPeak struct {
 
 type CrowdPeaks struct {
 	BusiestHour      *CrowdHourPeak   `json:"busiest_hour"`
+	LeastHour        *CrowdHourPeak   `json:"least_hour"`
+	TopHours         []CrowdHourPeak  `json:"top_hours"`
+	HourlyProfile    []CrowdHourPeak  `json:"hourly_profile"`
 	LeastCrowdedTime *CrowdHeatmapRow `json:"least_crowded_time"`
 }
 

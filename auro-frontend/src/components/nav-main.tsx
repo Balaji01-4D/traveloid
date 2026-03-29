@@ -1,5 +1,5 @@
 import { ChevronRight, type LucideIcon } from "lucide-react"
-import { NavLink } from "react-router-dom"
+import { NavLink, useLocation } from "react-router-dom"
 
 import {
   Collapsible,
@@ -31,15 +31,21 @@ export function NavMain({
     }[]
   }[]
 }) {
+  const location = useLocation()
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
+          const isMainActive =
+            location.pathname === item.url ||
+            location.pathname.startsWith(`${item.url}/`)
+
           if (!item.items?.length) {
             return (
               <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild tooltip={item.title}>
+                <SidebarMenuButton asChild tooltip={item.title} isActive={isMainActive}>
                   <NavLink to={item.url}>
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
@@ -53,22 +59,22 @@ export function NavMain({
             <Collapsible
               key={item.title}
               asChild
-              defaultOpen={item.isActive}
+              defaultOpen={item.isActive || isMainActive}
               className="group/collapsible"
             >
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
-                  <SidebarMenuButton tooltip={item.title}>
+                  <SidebarMenuButton tooltip={item.title} isActive={isMainActive}>
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
-                    <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    <ChevronRight className="ml-auto transition-transform duration-300 ease-out group-data-[state=open]/collapsible:rotate-90" />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {item.items.map((subItem) => (
                       <SidebarMenuSubItem key={subItem.title}>
-                        <SidebarMenuSubButton asChild>
+                        <SidebarMenuSubButton asChild isActive={location.pathname === subItem.url}>
                           <NavLink to={subItem.url}>
                             <span>{subItem.title}</span>
                           </NavLink>

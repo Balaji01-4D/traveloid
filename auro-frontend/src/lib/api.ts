@@ -186,6 +186,18 @@ export interface CrowdPeaksResponse {
     hour: number
     avg_count: number
   } | null
+  least_hour: {
+    hour: number
+    avg_count: number
+  } | null
+  top_hours: Array<{
+    hour: number
+    avg_count: number
+  }>
+  hourly_profile: Array<{
+    hour: number
+    avg_count: number
+  }>
   least_crowded_time: {
     day_of_week: number
     hour: number
@@ -230,6 +242,14 @@ export interface ForecastAlertsResponse {
   end: string
   overload_count: number
   alerts: ForecastAlert[]
+}
+
+export interface BootstrapPlaceDataResponse {
+  place_id: number
+  seeded_actual_rows: number
+  seeded_forecast_rows: number
+  seed_anchor: string
+  status: string
 }
 
 export async function getPlaceCurrent(placeId: number): Promise<PlaceCurrentResponse> {
@@ -288,5 +308,85 @@ export async function getPlaceForecast(
 
 export async function getPlaceForecastAlerts(placeId: number): Promise<ForecastAlertsResponse> {
   const { data } = await api.get<ForecastAlertsResponse>(`/places/${placeId}/forecast/alerts`)
+  return data
+}
+
+export async function bootstrapPlaceData(placeId: number): Promise<BootstrapPlaceDataResponse> {
+  const { data } = await api.post<BootstrapPlaceDataResponse>(`/places/${placeId}/bootstrap`)
+  return data
+}
+
+export interface PublicOrganisationsResponse {
+  organisations: Organisation[]
+}
+
+export async function getPublicOrganisations(): Promise<PublicOrganisationsResponse> {
+  const { data } = await api.get<PublicOrganisationsResponse>('/public/organisations')
+  return data
+}
+
+export async function getPublicPlaces(orgId: number): Promise<GetPlacesResponse> {
+  const { data } = await api.get<GetPlacesResponse>(`/public/organisations/${orgId}/places`)
+  return data
+}
+
+export async function getPublicPlaceCurrent(orgId: number, placeId: number): Promise<PlaceCurrentResponse> {
+  const { data } = await api.get<PlaceCurrentResponse>(`/public/organisations/${orgId}/places/${placeId}/current`)
+  return data
+}
+
+export async function getPublicPlaceTimeSeries(
+  orgId: number,
+  placeId: number,
+  start: Date,
+  end: Date,
+  interval: 'hour' | 'day' = 'hour',
+): Promise<PlaceTimeSeriesResponse> {
+  const params = new URLSearchParams({
+    start: start.toISOString(),
+    end: end.toISOString(),
+    interval,
+  })
+
+  const { data } = await api.get<PlaceTimeSeriesResponse>(`/public/organisations/${orgId}/places/${placeId}/timeseries?${params.toString()}`)
+  return data
+}
+
+export async function getPublicPlaceForecastAlerts(orgId: number, placeId: number): Promise<ForecastAlertsResponse> {
+  const { data } = await api.get<ForecastAlertsResponse>(`/public/organisations/${orgId}/places/${placeId}/forecast/alerts`)
+  return data
+}
+
+export async function getPublicPlaceForecastNext(orgId: number, placeId: number, hours = 24): Promise<ForecastNextResponse> {
+  const { data } = await api.get<ForecastNextResponse>(`/public/organisations/${orgId}/places/${placeId}/forecast/next?hours=${hours}`)
+  return data
+}
+
+export async function getPublicPlaceCrowdPeaks(orgId: number, placeId: number, range = '7d'): Promise<CrowdPeaksResponse> {
+  const { data } = await api.get<CrowdPeaksResponse>(`/public/organisations/${orgId}/places/${placeId}/crowd/peaks?range=${encodeURIComponent(range)}`)
+  return data
+}
+
+export async function getPublicPlaceCrowdHeatmap(orgId: number, placeId: number, range = '30d'): Promise<CrowdHeatmapResponse> {
+  const { data } = await api.get<CrowdHeatmapResponse>(`/public/organisations/${orgId}/places/${placeId}/crowd/heatmap?range=${encodeURIComponent(range)}`)
+  return data
+}
+
+export async function getPublicPlaceForecast(
+  orgId: number,
+  placeId: number,
+  start?: Date,
+  end?: Date,
+): Promise<ForecastResponse> {
+  const params = new URLSearchParams()
+  if (start) {
+    params.set('start', start.toISOString())
+  }
+  if (end) {
+    params.set('end', end.toISOString())
+  }
+
+  const suffix = params.size > 0 ? `?${params.toString()}` : ''
+  const { data } = await api.get<ForecastResponse>(`/public/organisations/${orgId}/places/${placeId}/forecast${suffix}`)
   return data
 }

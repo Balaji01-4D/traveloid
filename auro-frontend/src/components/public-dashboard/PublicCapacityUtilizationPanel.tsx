@@ -88,7 +88,7 @@ function UtilizationTooltip({
   )
 }
 
-export default function CapacityUtilizationPanel({
+export default function PublicCapacityUtilizationPanel({
   forecast,
   capacity,
 }: {

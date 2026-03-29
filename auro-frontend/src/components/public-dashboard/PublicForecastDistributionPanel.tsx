@@ -15,7 +15,7 @@ import {
   YAxis,
 } from 'recharts'
 
-import { getPlaceForecast } from '@/lib/api'
+import { getPublicPlaceForecast } from '@/lib/api'
 import {
   floorToISTIntervalMs,
   formatISTDate,
@@ -162,11 +162,12 @@ function ForecastTooltip({
   )
 }
 
-export default function ForecastDistributionPanel({
-  placeId,
+export default function PublicForecastDistributionPanel({
+  orgId, placeId,
   capacity,
   active,
 }: {
+  orgId: number
   placeId: number
   capacity: number
   active: boolean
@@ -179,12 +180,12 @@ export default function ForecastDistributionPanel({
   const forecastQuery = useQuery({
     queryKey: [
       'place-forecast',
-      placeId,
+      orgId, placeId,
       'distribution',
       selectedRange.start.toISOString(),
       selectedRange.end.toISOString(),
     ],
-    queryFn: () => getPlaceForecast(placeId, selectedRange.start, selectedRange.end),
+    queryFn: () => getPublicPlaceForecast(orgId, placeId, selectedRange.start, selectedRange.end),
     enabled: Number.isFinite(placeId) && active,
   })
 

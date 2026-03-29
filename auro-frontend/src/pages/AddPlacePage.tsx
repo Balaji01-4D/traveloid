@@ -72,7 +72,7 @@ export default function AddPlacePage() {
   const [isLocating, setIsLocating] = useState(false)
   const [mapLink, setMapLink] = useState('')
 
-  async function useCurrentLocation(): Promise<boolean> {
+  async function fetchCurrentLocation(): Promise<boolean> {
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser.')
       return false
@@ -109,7 +109,7 @@ export default function AddPlacePage() {
     const capacity = parseInt((form.elements.namedItem('capacity') as HTMLInputElement).value, 10)
 
     if (coordinateMode === 'current' && (latitude === null || longitude === null)) {
-      const ok = await useCurrentLocation()
+      const ok = await fetchCurrentLocation()
       if (!ok) {
         setLoading(false)
         return
@@ -137,8 +137,10 @@ export default function AddPlacePage() {
         longitude,
       })
 
-      toast.success('Place created successfully.')
-      navigate('/dashboard/places', { replace: true })
+      toast.success('Place created successfully.', {
+        description: 'Live metrics and analysis views are now ready for this place.',
+      })
+      navigate('/dashboard/places?created=1', { replace: true })
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { error?: string; message?: string } } }
       toast.error(
@@ -225,7 +227,7 @@ export default function AddPlacePage() {
               <p className='mb-3 text-sm text-muted-foreground'>
                 Use your browser geolocation to autofill hidden coordinates.
               </p>
-              <Button type='button' variant='outline' onClick={useCurrentLocation} disabled={isLocating}>
+              <Button type='button' variant='outline' onClick={fetchCurrentLocation} disabled={isLocating}>
                 {isLocating ? 'Fetching location...' : 'Use Current Location'}
               </Button>
             </div>

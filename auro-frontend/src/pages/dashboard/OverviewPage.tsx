@@ -121,14 +121,16 @@ export default function OverviewPage() {
           <CardHeader className="pb-2">
             <CardDescription>Current crowd</CardDescription>
             <CardTitle className="text-3xl">
-              {loadingPrimary ? '--' : (currentQuery.data?.latest_actual?.count ?? 0)}
+              {loadingPrimary ? '--' : (currentQuery.data?.latest_actual?.count ?? '--')}
             </CardTitle>
           </CardHeader>
           <CardContent className="flex items-center gap-2 text-xs text-muted-foreground">
             <Users className="h-3.5 w-3.5" />
             {loadingPrimary
               ? 'Loading latest occupancy...'
-              : `${(currentQuery.data?.latest_actual?.percent_capacity ?? 0).toFixed(1)}% of capacity`}
+              : currentQuery.data?.latest_actual
+                ? `${(currentQuery.data.latest_actual.percent_capacity ?? 0).toFixed(1)}% of capacity`
+                : 'No recent live occupancy sample.'}
           </CardContent>
         </Card>
 

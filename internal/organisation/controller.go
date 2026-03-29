@@ -197,6 +197,18 @@ func (ctrl *Controller) DeleteOrg(c *gin.Context) {
 	})
 }
 
+func (ctrl *Controller) GetAllOrgs(c *gin.Context) {
+	orgs, err := ctrl.service.GetAllOrgs()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"organisations": orgs,
+	})
+}
+
 func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	repo := NewRepository(db)
 	svc := NewService(repo)
@@ -212,5 +224,10 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 
 		org.POST("/admin", ctrl.AddOrgAdmin) // first member with admin role, no auth required, right after org registered successfully
 		org.POST("/member", middlewares.RequireAuth(db), middlewares.RequireAdmin(db), ctrl.AddOrgMember) // requires auth, only admin can add members
+	}
+
+	publicOrg := r.Group("/public/organisations")
+	{
+		publicOrg.GET("", ctrl.GetAllOrgs)
 	}
 }

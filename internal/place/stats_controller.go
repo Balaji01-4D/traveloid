@@ -182,6 +182,9 @@ func (ctrl *Controller) GetCrowdPeaks(c *gin.Context) {
 		"start":              start,
 		"end":                end,
 		"busiest_hour":       peaks.BusiestHour,
+		"least_hour":         peaks.LeastHour,
+		"top_hours":          peaks.TopHours,
+		"hourly_profile":     peaks.HourlyProfile,
 		"least_crowded_time": peaks.LeastCrowdedTime,
 	})
 }
@@ -435,6 +438,40 @@ func (ctrl *Controller) GetCurrent(c *gin.Context) {
 		"capacity":         capacity,
 		"latest_actual":    latestActual,
 		"next_predictions": nextPredictions,
+	})
+}
+
+func (ctrl *Controller) BootstrapPlaceData(c *gin.Context) {
+	placeIDParam := c.Param("place_id")
+	var placeID int64
+	if _, err := fmt.Sscanf(placeIDParam, "%d", &placeID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid place_id"})
+		return
+	}
+
+	orgIDValue, exists := c.Get("organisation_id")
+	if !exists {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	anchor := utils.NowIST().Truncate(time.Hour)
+	actualRows, forecastRows, err := ctrl.service.BootstrapPlaceData(orgIDValue.(int64), placeID, anchor)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "place not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"place_id":             placeID,
+		"seeded_actual_rows":   actualRows,
+		"seeded_forecast_rows": forecastRows,
+		"seed_anchor":          anchor,
+		"status":               "seeded place analytics data",
 	})
 }
 
