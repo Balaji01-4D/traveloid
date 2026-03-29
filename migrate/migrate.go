@@ -28,6 +28,8 @@ func Migrate() {
 	err = db.AutoMigrate(&models.Organisation{})
 	err = db.AutoMigrate(&models.Member{})
 	err = db.AutoMigrate(&models.Place{})
+	err = db.AutoMigrate(&models.PlaceCrowdData{})
+	err = db.AutoMigrate(&models.Forecast{})
 	if err != nil {
 		panic("failed to migrate database")
 	}
